@@ -1,0 +1,118 @@
+import java.util.*;
+
+public class PageReplacement18 {
+    static void printFrames(List<Integer> f, int capacity) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < capacity; i++) {
+            if (i < f.size()) sb.append(f.get(i));
+            else sb.append("-");
+            if (i < capacity - 1) sb.append(" ");
+        }
+        System.out.print("[" + sb.toString() + "]");
+    }
+
+    static void simulateFIFO(int[] refs, int capacity) {
+        System.out.println("\n--- FIFO ---");
+        Queue<Integer> q = new LinkedList<>();
+        Set<Integer> mem = new HashSet<>();
+        int faults = 0, hits = 0;
+        for (int r : refs) {
+            boolean hit = mem.contains(r);
+            if (hit) hits++;
+            else {
+                faults++;
+                if (q.size() == capacity) {
+                    int rem = q.poll();
+                    mem.remove(rem);
+                }
+                q.offer(r);
+                mem.add(r);
+            }
+            List<Integer> frames = new ArrayList<>(q);
+            System.out.print("ref=" + r + " ");
+            printFrames(frames, capacity);
+            System.out.println("  " + (hit ? "HIT" : "FAULT"));
+        }
+        System.out.println("Page Faults=" + faults + "  Hits=" + hits + "  Hit Ratio=" + String.format("%.2f", (hits * 1.0 / refs.length)));
+    }
+
+    static void simulateLRU(int[] refs, int capacity) {
+        System.out.println("\n--- LRU ---");
+        LinkedList<Integer> list = new LinkedList<>();
+        int faults = 0, hits = 0;
+        for (int r : refs) {
+            boolean hit = list.contains(r);
+            if (hit) {
+                hits++;
+                list.removeFirstOccurrence(r);
+                list.addLast(r);
+            } else {
+                faults++;
+                if (list.size() == capacity) list.removeFirst();
+                list.addLast(r);
+            }
+            System.out.print("ref=" + r + " ");
+            printFrames(new ArrayList<>(list), capacity);
+            System.out.println("  " + (hit ? "HIT" : "FAULT"));
+        }
+        System.out.println("Page Faults=" + faults + "  Hits=" + hits + "  Hit Ratio=" + String.format("%.2f", (hits * 1.0 / refs.length)));
+    }
+
+    static void simulateOPT(int[] refs, int capacity) {
+        System.out.println("\n--- OPTIMAL ---");
+        List<Integer> mem = new ArrayList<>();
+        int faults = 0, hits = 0;
+        for (int i = 0; i < refs.length; i++) {
+            int r = refs[i];
+            boolean hit = mem.contains(r);
+            if (hit) hits++;
+            else {
+                faults++;
+                if (mem.size() < capacity) mem.add(r);
+                else {
+                    int idxToReplace = -1;
+                    int farthest = -1;
+                    for (int j = 0; j < mem.size(); j++) {
+                        int page = mem.get(j);
+                        int nextUse = -1;
+                        for (int k = i + 1; k < refs.length; k++) {
+                            if (refs[k] == page) { nextUse = k; break; }
+                        }
+                        if (nextUse == -1) { idxToReplace = j; break; }
+                        if (nextUse > farthest) { farthest = nextUse; idxToReplace = j; }
+                    }
+                    mem.set(idxToReplace, r);
+                }
+            }
+            System.out.print("ref=" + r + " ");
+            printFrames(mem, capacity);
+            System.out.println("  " + (hit ? "HIT" : "FAULT"));
+        }
+        System.out.println("Page Faults=" + faults + "  Hits=" + hits + "  Hit Ratio=" + String.format("%.2f", (hits * 1.0 / refs.length)));
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        System.out.println("===== PAGE REPLACEMENT SIMULATOR =====");
+        System.out.print("Enter number of frames: ");
+        int capacity = sc.nextInt();
+        System.out.print("Enter number of page references: ");
+        int n = sc.nextInt();
+        int[] refs = new int[n];
+        System.out.println("Enter page reference string:");
+        for (int i = 0; i < n; i++) refs[i] = sc.nextInt();
+
+        while (true) {
+            System.out.println("\n1. FIFO\n2. LRU\n3. OPTIMAL\n4. Exit");
+            System.out.print("Enter your choice: ");
+            int ch = sc.nextInt();
+            if (ch == 4) break;
+            if (ch == 1) simulateFIFO(refs, capacity);
+            else if (ch == 2) simulateLRU(refs, capacity);
+            else if (ch == 3) simulateOPT(refs, capacity);
+            else System.out.println("Invalid choice!");
+        }
+        sc.close();
+    }
+}
+
